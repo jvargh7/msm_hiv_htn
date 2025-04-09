@@ -3,7 +3,7 @@ gc();rm(list=ls());source(".Rprofile")
 selected_vars_msm = c("h1_hhidpn","h1_spouseidpn","h2_spouseidpn","coupleid",
                    "hh_children","hh_size",
                    "strata","psu", "hhsampleweight",
-                   "indsampleweight", 
+                   "h1_indsampleweight", "h2_indsampleweight",
                    "h1_lengthmar",
                    "h1_age", "h2_age",
                    "h1_gender", "h2_gender",
@@ -14,6 +14,8 @@ selected_vars_msm = c("h1_hhidpn","h1_spouseidpn","h2_spouseidpn","coupleid",
                    "h1_sbp", "h2_sbp",
                    "h1_dbp", "h2_dbp",
                    "h1_htn", "h2_htn",
+                   "h1_htn_diagnosed","h2_htn_diagnosed",
+                   "h1_diagnosed_bp","h2_diagnosed_bp",
                    "h1_education_h", "h2_education_h",
                    "h1_married", "h2_married",
                    
@@ -26,7 +28,7 @@ selected_vars_msm = c("h1_hhidpn","h1_spouseidpn","h2_spouseidpn","coupleid",
 selected_vars_wsw = c("w1_hhidpn","w1_spouseidpn","w2_spouseidpn","coupleid",
                       "hh_children","hh_size",
                       "strata","psu","hhsampleweight",
-                      "indsampleweight", 
+                      "w1_indsampleweight","w2_indsampleweight", 
                       "w1_lengthmar",
                       "w1_age", "w2_age",
                       "w1_gender", "w2_gender",
@@ -37,6 +39,9 @@ selected_vars_wsw = c("w1_hhidpn","w1_spouseidpn","w2_spouseidpn","coupleid",
                       "w1_sbp", "w2_sbp",
                       "w1_dbp", "w2_dbp",
                       "w1_htn", "w2_htn",
+                      "w1_htn_diagnosed","w2_htn_diagnosed",
+                      "w1_diagnosed_bp","w2_diagnosed_bp",
+                      
                       "w1_education_h", "w2_education_h",
                       "w1_married", "w2_married",
                       
@@ -87,7 +92,8 @@ msm_analytic_dataset_scs <- bind_rows(
   msm_couples_wave13 %>% mutate(wave = 13),
   msm_couples_wave14 %>% mutate(wave = 14)
 ) %>% 
-  dplyr::filter((!is.na(h1_htn) & !is.na(h2_htn)) | (!is.na(h1_sbp) & !is.na(h2_sbp) & !is.na(h1_dbp) & !is.na(h2_dbp)))
+  # dplyr::filter((h1_htn == 1 & h2_htn == 1) | (!is.na(h1_sbp) & !is.na(h2_sbp) & !is.na(h1_dbp) & !is.na(h2_dbp)))
+  dplyr::filter((!is.na(h1_sbp) & !is.na(h2_sbp) & !is.na(h1_dbp) & !is.na(h2_dbp)))
 
 wsw_analytic_dataset_scs <- bind_rows(
   wsw_couples_wave8 %>% mutate(wave = 8),
@@ -98,7 +104,8 @@ wsw_analytic_dataset_scs <- bind_rows(
   wsw_couples_wave13 %>% mutate(wave = 13),
   wsw_couples_wave14 %>% mutate(wave = 14)
 ) %>% 
-  dplyr::filter((!is.na(w1_htn) & !is.na(w2_htn)) | (!is.na(w1_sbp) & !is.na(w2_sbp) & !is.na(w1_dbp) & !is.na(w2_dbp)))
+  # dplyr::filter((w1_htn == 1 & w2_htn == 1) | (!is.na(w1_sbp) & !is.na(w2_sbp) & !is.na(w1_dbp) & !is.na(w2_dbp)))
+  dplyr::filter((!is.na(w1_sbp) & !is.na(w2_sbp) & !is.na(w1_dbp) & !is.na(w2_dbp)))
 
 rm(list = ls()[regexpr("couples_wave",ls())>0])
 
@@ -113,11 +120,16 @@ msm_analytic_dataset_unique <- msm_analytic_dataset_scs %>%
   group_by(coupleid) %>% 
   dplyr::filter(wave == max(wave)) %>% 
   ungroup() %>% 
+  mutate(coupleweight = case_when(h1_indsampleweight > 0 & h2_indsampleweight > 0 ~ (h1_indsampleweight + h2_indsampleweight)/2,
+                                  h1_indsampleweight == 0 ~ h2_indsampleweight,
+                                  h2_indsampleweight == 0 ~ h1_indsampleweight,
+                                  TRUE ~ NA_real_)) %>% 
+  dplyr::filter(!is.na(coupleweight)) %>% 
   group_by(wave) %>% 
-  mutate(indsampleweight = indsampleweight/sum(indsampleweight)) %>% 
-  mutate(indsampleweight = indsampleweight/n()) %>% 
+  mutate(coupleweight = coupleweight/sum(coupleweight)) %>% 
+  mutate(coupleweight = coupleweight/n()) %>% 
   ungroup() %>% 
-  mutate(indsampleweight = indsampleweight*n()) %>% 
+  mutate(coupleweight = coupleweight*n()) %>% 
   mutate(
          g_htn = case_when(h1_htn == 1 & h2_htn == 1 ~ "Both",
                            h1_htn == 1 & h2_htn == 0 ~ "One",
@@ -141,6 +153,37 @@ msm_analytic_dataset_unique <- msm_analytic_dataset_scs %>%
                            h1_htn == 0 & h2_htn == 1 ~ 0,
                            h1_htn == 0 & h2_htn == 0 ~ 0,
                            TRUE ~ NA_real_),
+         
+         c_htn_diagnosed = case_when(h1_htn_diagnosed == 1 & h2_htn_diagnosed == 1 ~ 1,
+                                     h1_htn_diagnosed == 1 & h2_htn_diagnosed == 0 ~ 0,
+                                     h1_htn_diagnosed == 0 & h2_htn_diagnosed == 1 ~ 0,
+                                     h1_htn_diagnosed == 0 & h2_htn_diagnosed == 0 ~ 0,
+                           TRUE ~ NA_real_),
+         
+         # Discordant
+         d_htn = case_when(h1_htn == 1 & h2_htn == 1 ~ 0,
+                           h1_htn == 1 & h2_htn == 0 ~ 1,
+                           h1_htn == 0 & h2_htn == 1 ~ 1,
+                           h1_htn == 0 & h2_htn == 0 ~ 0,
+                           TRUE ~ NA_real_),
+         
+         c_htn_free = 1 - c_htn - d_htn,
+         # c_diagnosed_bp = case_when(h1_diagnosed_bp == 1 & h2_diagnosed_bp == 1 ~ 1,
+         #                            h1_diagnosed_bp == 1 & h2_diagnosed_bp == 0 ~ 0,
+         #                            h1_diagnosed_bp == 0 & h2_diagnosed_bp == 1 ~ 0,
+         #                            h1_diagnosed_bp == 0 & h2_diagnosed_bp == 0 ~ 0,
+         #                            TRUE ~ NA_real_),
+         c_diag_undiag = case_when(h1_diagnosed_bp == 1 & h2_diagnosed_bp == 0 & c_htn == 1 ~ 1,
+                                   h1_diagnosed_bp == 0 & h2_diagnosed_bp == 1 & c_htn == 1  ~ 1,
+                                   h1_diagnosed_bp == 0 & h2_diagnosed_bp == 0 & c_htn == 1  ~ 1,
+                                   h1_diagnosed_bp == 1 & h2_diagnosed_bp == 1 & c_htn == 1 ~ 0,
+                                   TRUE ~ NA_real_),
+         # c_diag_undiag = case_when(h1_diagnosed_bp == 1 & h2_diagnosed_bp == 0 & h2_htn == 1 ~ 1,
+         #                           h1_diagnosed_bp == 0 & h1_htn == 1 & h2_diagnosed_bp == 1  ~ 1,
+         #                           h1_diagnosed_bp == 0 & h1_htn == 1 & h2_diagnosed_bp == 0 & h2_htn == 1 ~ 1,
+         #                           h1_diagnosed_bp == 1 & h2_diagnosed_bp == 1 ~ 0,
+         #                           TRUE ~ NA_real_),
+         
          c_owob = case_when(h1_bmi >= 25 & h2_bmi >= 25 ~ 1,
                             h1_bmi >= 25 & h2_bmi < 25 ~ 0,
                             h1_bmi < 25 & h2_bmi >= 25 ~ 0,
@@ -164,6 +207,20 @@ msm_analytic_dataset_unique <- msm_analytic_dataset_scs %>%
                            h1_htn == 0 & h2_htn == 1 ~ 1,
                            h1_htn == 0 & h2_htn == 0 ~ 0,
                            TRUE ~ NA_real_),
+         
+         
+         # with(msm_analytic_dataset_unique,table(h1_htn_diagnosed,h1_diagnosed_bp,useNA = "always")) --> Same
+         a_htn_diagnosed = case_when(h1_htn_diagnosed == 1 & h2_htn_diagnosed == 1 ~ 1,
+                                     h1_htn_diagnosed == 1 & h2_htn_diagnosed == 0 ~ 1,
+                                     h1_htn_diagnosed == 0 & h2_htn_diagnosed == 1 ~ 1,
+                                     h1_htn_diagnosed == 0 & h2_htn_diagnosed == 0 ~ 0,
+                                     TRUE ~ NA_real_),
+         
+         # a_diagnosed_bp = case_when(h1_diagnosed_bp == 1 & h2_diagnosed_bp == 1 ~ 1,
+         #                            h1_diagnosed_bp == 1 & h2_diagnosed_bp == 0 ~ 1,
+         #                            h1_diagnosed_bp == 0 & h2_diagnosed_bp == 1 ~ 1,
+         #                            h1_diagnosed_bp == 0 & h2_diagnosed_bp == 0 ~ 0,
+         #                            TRUE ~ NA_real_),
          a_owob = case_when(h1_bmi >= 25 & h2_bmi >= 25 ~ 1,
                             h1_bmi >= 25 & h2_bmi < 25 ~ 1,
                             h1_bmi < 25 & h2_bmi >= 25 ~ 1,
@@ -185,7 +242,10 @@ msm_analytic_dataset_unique <- msm_analytic_dataset_scs %>%
          c_mean_age = (h1_age + h2_age)/2,
          c_mean_bmi = (h1_bmi + h2_bmi)/2,
          c_mean_sbp = (h1_sbp + h2_sbp)/2,
-         c_mean_dbp = (h1_dbp + h2_dbp)/2)
+         c_mean_dbp = (h1_dbp + h2_dbp)/2,
+         
+         c_younger_age = pmin(h1_age,h2_age),
+         c_older_age = pmax(h1_age,h2_age))
 
 msm_analytic_dataset_unique_svy = msm_analytic_dataset_unique %>% 
   
@@ -193,7 +253,7 @@ msm_analytic_dataset_unique_svy = msm_analytic_dataset_unique %>%
   as_survey_design(.data = .,
                    # ids = psu,
                    # strata = strata,
-                   weight = indsampleweight,
+                   weight = coupleweight,
                    nest = TRUE,
                    variance = "YG",pps = "brewer")
 
@@ -210,11 +270,17 @@ wsw_analytic_dataset_unique <- wsw_analytic_dataset_scs %>%
   group_by(coupleid) %>% 
   dplyr::filter(wave == max(wave)) %>% 
   ungroup() %>% 
+  mutate(coupleweight = case_when(w1_indsampleweight > 0 & w2_indsampleweight > 0 ~ (w1_indsampleweight + w2_indsampleweight)/2,
+                                  w1_indsampleweight == 0 ~ w2_indsampleweight,
+                                  w2_indsampleweight == 0 ~ w1_indsampleweight,
+                                  TRUE ~ NA_real_)) %>% 
+  dplyr::filter(!is.na(coupleweight)) %>% 
+  
   group_by(wave) %>% 
-  mutate(indsampleweight = indsampleweight/sum(indsampleweight)) %>% 
-  mutate(indsampleweight = indsampleweight/n()) %>% 
+  mutate(coupleweight = coupleweight/sum(coupleweight)) %>% 
+  mutate(coupleweight = coupleweight/n()) %>% 
   ungroup() %>% 
-  mutate(indsampleweight = indsampleweight*n())  %>% 
+  mutate(coupleweight = coupleweight*n())  %>% 
   mutate(g_htn = case_when(w1_htn == 1 & w2_htn == 1 ~ "Both",
                             w1_htn == 1 & w2_htn == 0 ~ "One",
                             w1_htn == 0 & w2_htn == 1 ~ "One",
@@ -238,6 +304,35 @@ wsw_analytic_dataset_unique <- wsw_analytic_dataset_scs %>%
                            w1_htn == 0 & w2_htn == 1 ~ 0,
                            w1_htn == 0 & w2_htn == 0 ~ 0,
                            TRUE ~ NA_real_),
+         
+         c_htn_diagnosed = case_when(w1_htn_diagnosed == 1 & w2_htn_diagnosed == 1 ~ 1,
+                                     w1_htn_diagnosed == 1 & w2_htn_diagnosed == 0 ~ 0,
+                                     w1_htn_diagnosed == 0 & w2_htn_diagnosed == 1 ~ 0,
+                                     w1_htn_diagnosed == 0 & w2_htn_diagnosed == 0 ~ 0,
+                                     TRUE ~ NA_real_),
+         
+         # Discordant
+         d_htn = case_when(w1_htn == 1 & w2_htn == 1 ~ 0,
+                           w1_htn == 1 & w2_htn == 0 ~ 1,
+                           w1_htn == 0 & w2_htn == 1 ~ 1,
+                           w1_htn == 0 & w2_htn == 0 ~ 0,
+                           TRUE ~ NA_real_),
+         
+         # None
+         c_htn_free = 1 - c_htn - d_htn,
+         
+         c_diag_undiag = case_when(w1_diagnosed_bp == 1 & w2_diagnosed_bp == 0 & c_htn == 1 ~ 1,
+                                   w1_diagnosed_bp == 0 & w2_diagnosed_bp == 1 & c_htn == 1  ~ 1,
+                                   w1_diagnosed_bp == 0 & w2_diagnosed_bp == 0 & c_htn == 1  ~ 1,
+                                   w1_diagnosed_bp == 1 & w2_diagnosed_bp == 1 & c_htn == 1 ~ 0,
+                                   TRUE ~ NA_real_),
+         # c_diag_undiag = case_when(w1_diagnosed_bp == 1 & w2_diagnosed_bp == 0 & w2_htn == 1 ~ 1,
+         #                           w1_diagnosed_bp == 0 & w1_htn == 1 & w2_diagnosed_bp == 1  ~ 1,
+         #                           w1_diagnosed_bp == 0 & w1_htn == 1 & w2_diagnosed_bp == 0 & w2_htn == 1 ~ 1,
+         #                           w1_diagnosed_bp == 1 & w2_diagnosed_bp == 1 ~ 0,
+         #                            TRUE ~ NA_real_),
+         
+         
          c_owob = case_when(w1_bmi >= 25 & w2_bmi >= 25 ~ 1,
                             w1_bmi >= 25 & w2_bmi < 25 ~ 0,
                             w1_bmi < 25 & w2_bmi >= 25 ~ 0,
@@ -261,6 +356,19 @@ wsw_analytic_dataset_unique <- wsw_analytic_dataset_scs %>%
                            w1_htn == 0 & w2_htn == 1 ~ 1,
                            w1_htn == 0 & w2_htn == 0 ~ 0,
                            TRUE ~ NA_real_),
+         
+         a_htn_diagnosed = case_when(w1_htn_diagnosed == 1 & w2_htn_diagnosed == 1 ~ 1,
+                                     w1_htn_diagnosed == 1 & w2_htn_diagnosed == 0 ~ 1,
+                                     w1_htn_diagnosed == 0 & w2_htn_diagnosed == 1 ~ 1,
+                                     w1_htn_diagnosed == 0 & w2_htn_diagnosed == 0 ~ 0,
+                                     TRUE ~ NA_real_),
+         
+         # a_diag_undiag = case_when(w1_diagnosed_bp == 1 & w2_diagnosed_bp == 1 ~ 1,
+         #                            w1_diagnosed_bp == 1 & w2_diagnosed_bp == 0 ~ 1,
+         #                            w1_diagnosed_bp == 0 & w2_diagnosed_bp == 1 ~ 1,
+         #                            w1_diagnosed_bp == 0 & w2_diagnosed_bp == 0 ~ 0,
+         #                             TRUE ~ NA_real_),
+         
          a_owob = case_when(w1_bmi >= 25 & w2_bmi >= 25 ~ 1,
                             w1_bmi >= 25 & w2_bmi < 25 ~ 1,
                             w1_bmi < 25 & w2_bmi >= 25 ~ 1,
@@ -283,7 +391,12 @@ wsw_analytic_dataset_unique <- wsw_analytic_dataset_scs %>%
          c_mean_age = (w1_age + w2_age)/2,
          c_mean_bmi = (w1_bmi + w2_bmi)/2,
          c_mean_sbp = (w1_sbp + w2_sbp)/2,
-         c_mean_dbp = (w1_dbp + w2_dbp)/2)
+         c_mean_dbp = (w1_dbp + w2_dbp)/2,
+         
+         c_younger_age = pmin(w1_age,w2_age),
+         c_older_age = pmax(w1_age,w2_age)
+         
+         )
 
 wsw_analytic_dataset_unique_svy = wsw_analytic_dataset_unique %>% 
   
@@ -291,7 +404,7 @@ wsw_analytic_dataset_unique_svy = wsw_analytic_dataset_unique %>%
   as_survey_design(.data = .,
                    # ids = psu,
                    # strata = strata,
-                   weight = indsampleweight,
+                   weight = coupleweight,
                    nest = TRUE,
                    variance = "YG",pps = "brewer")
 
