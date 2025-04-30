@@ -5,10 +5,10 @@
 library(pwr)
 
 # Example parameters
-PR1 <- 1.31
-n <- 160 # Initial guess for sample size
+PR1 <- 1.31 # Guess at PR
+n <- 160 # Initial guess for sample size of number of couples
 m <- 0.496 # Calculate 'a' using the first equation
-a <- (PR1 * m) / (1 + PR1)
+a <- (PR1 * m) / (1 + PR1) # Expected couple concordance % with PR
 p_control = m - a
 p_treatment = a
 
@@ -36,14 +36,12 @@ r_treatment = 10/1000
 risk_control = N_rest*r_control
 risk_treatment = N_m_minus_a*r_treatment
 
-
-log_RR <- log(risk_treatment) - log(risk_control)
-# log_RR <- log(r_treatment) - log(r_control)
+# Risk ratio: 1.28 times higher risk
 pRR_test <- pwr.p.test(h = log(1.28),sig.level = alpha, n = (N_m_minus_a + N_rest),alternative = "two.sided")
-# pRR_test <- pwr.p.test(n = , sig.level = alpha, power = power, alternative = "two.sided")
 pRR_test
 
-p_test$n*1.10*1.10*1.10
+# Design effect x Follow-up 1 x Follow-up 2
+p_test$n*1.10*1.11*1.11
 
 
 

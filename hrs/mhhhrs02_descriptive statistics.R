@@ -68,6 +68,11 @@ msm_analytic_dataset_unique_svy %>%
   summarize(pct = survey_prop(proportion = TRUE,prop_method = "logit",vartype = "ci"))
 
 msm_analytic_dataset_unique_svy %>%
+  group_by(d_htn) %>%
+  summarize(pct = survey_prop(proportion = TRUE,prop_method = "logit",vartype = "ci"))
+
+
+msm_analytic_dataset_unique_svy %>%
   group_by(c_diag_undiag) %>%
   summarize(pct = survey_prop(proportion = TRUE,prop_method = "logit",vartype = "ci"))
 
@@ -109,6 +114,11 @@ wsw_analytic_dataset_unique_svy %>%
 wsw_analytic_dataset_unique_svy %>%
   group_by(c_htn) %>%
   summarize(pct = survey_prop(proportion = TRUE,prop_method = "logit",vartype = "ci"))
+
+wsw_analytic_dataset_unique_svy %>%
+  group_by(d_htn) %>%
+  summarize(pct = survey_prop(proportion = TRUE,prop_method = "logit",vartype = "ci"))
+
 
 wsw_analytic_dataset_unique_svy %>%
   group_by(c_diag_undiag) %>%

@@ -100,12 +100,12 @@ wsw_age_sd = wsw_analytic_dataset_unique_svy  %>%
   )
 
 (fig_col) %>%
-  ggsave(plot = ., filename = paste0(path_hrs_same_sex_concordance_paper,"/figures/figure_column plot of concordance without SE with 3 categories.png"),width = 8, height = 4,dpi = 600)
+  ggsave(plot = ., filename = paste0(path_hrs_same_sex_concordance_paper,"/figures/figure_column plot of concordance without SE with 3 categories.tif"),width = 8, height = 4,dpi = 600)
 
 
 (fig_col +
     geom_errorbar(position = position_dodge2(preserve = "total",width = 0.9), width = 0.5, color = "grey40")) %>%
-  ggsave(plot = ., filename = paste0(path_hrs_same_sex_concordance_paper,"/figures/figure_column plot of concordance with SE with 3 categories.png"),width = 8, height = 4,dpi = 600)
+  ggsave(plot = ., filename = paste0(path_hrs_same_sex_concordance_paper,"/figures/figure_column plot of concordance with SE with 3 categories.tif"),width = 8, height = 4,dpi = 600)
 
 
 # (fig_col + 

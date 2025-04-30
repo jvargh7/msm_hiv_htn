@@ -1,6 +1,6 @@
 
 
-source("hrs/mhhrs_heterosexual couples.R")
+source("hrs/mhhhrs_heterosexual couples.R")
 source("C:/code/external/functions/survey/svysummary.R")
 
 
@@ -67,6 +67,11 @@ heterosexual_couples_svy %>%
 heterosexual_couples_svy %>%
   group_by(c_htn) %>%
   summarize(pct = survey_prop(proportion = TRUE,prop_method = "logit",vartype = "ci"))
+
+heterosexual_couples_svy %>%
+  group_by(d_htn) %>%
+  summarize(pct = survey_prop(proportion = TRUE,prop_method = "logit",vartype = "ci"))
+
 
 heterosexual_couples_svy %>%
   group_by(c_diag_undiag) %>%
